@@ -1,0 +1,44 @@
+---------------------------------------------CREACION DE LA DIMENSION FALLA----------------------------------------------
+CREATE TABLE FALLA 
+    ( 
+     FALLA_ID NUMBER  NOT NULL , 
+     FALLA_ID_VIEJO VARCHAR2 (3) , 
+     NOMBRE VARCHAR2 (100) 
+    ) 
+;
+
+ALTER TABLE FALLA 
+    ADD CONSTRAINT TABLE_7_PK PRIMARY KEY ( FALLA_ID ) ;
+
+CREATE SEQUENCE FALLA_FALLA_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER FALLA_FALLA_ID_TRG 
+BEFORE INSERT ON FALLA 
+FOR EACH ROW 
+WHEN (NEW.FALLA_ID IS NULL) 
+BEGIN 
+    SELECT FALLA_FALLA_ID_SEQ.NEXTVAL INTO :NEW.FALLA_ID FROM DUAL; 
+END;
+
+--------------------------------------CREACION DEL PROCEDIMIENTO PARA LLENAR FALLA----------------------------
+
+create or replace
+procedure llenar_falla as
+cursor falla is
+select distinct it.svo_codigo, ser.svo_nombre from items it
+join servicios ser on ser.svo_codigo = it.svo_codigo
+order by 1;
+
+v_codigo items.svo_codigo% TYPE;
+v_nombre servicios.svo_nombre% TYPE;
+begin 
+open falla;
+loop
+fetch falla into v_codigo, v_nombre;
+exit when falla%NOTFOUND;
+insert into falla(falla_id_viejo, nombre) values(v_codigo, v_nombre);
+end loop;
+close falla;
+end llenar_falla;
