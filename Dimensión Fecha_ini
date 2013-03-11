@@ -1,0 +1,64 @@
+Muchachos aqui está el Script de la tabla Fecha_ini:
+/--------------------------------------------------------------------------------------------/
+
+CREATE TABLE FECHA_INI 
+    ( 
+     FECHA_ID NUMBER  NOT NULL , 
+     FECHA_I DATE , 
+     DIA_I VARCHAR2 (50) , 
+     MES_I VARCHAR2 (50) , 
+     TRIMESTRE_I VARCHAR2 (50) , 
+     ANIO_I VARCHAR2 (50) 
+    ) 
+;
+
+ALTER TABLE FECHA_INI 
+    ADD CONSTRAINT FECHA_INI_PK PRIMARY KEY ( FECHA_ID ) ;
+
+CREATE SEQUENCE FECHA_INI_FECHA_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER FECHA_INI_FECHA_ID_TRG 
+BEFORE INSERT ON FECHA_INI 
+FOR EACH ROW 
+WHEN (NEW.FECHA_ID IS NULL) 
+BEGIN 
+    SELECT FECHA_INI_FECHA_ID_SEQ.NEXTVAL INTO :NEW.FECHA_ID FROM DUAL; 
+END;
+
+/---------------------------------------------------------------------------------------------/
+
+Y el PL de la carga inicial:
+
+
+CREATE OR REPLACE PROCEDURE cargar_fecha_ini AS
+
+CURSOR insertar_fecha IS
+select distinct to_date(his_fecha_inicio,'DD/MM/YY') fecha,
+to_char(his_fecha_inicio, 'DAY') dia, 
+to_char(his_fecha_inicio, 'MONTH') mes,
+to_char(his_fecha_inicio,'Q') trimestre,
+to_char(his_fecha_inicio, 'YY') año from items_historicos
+order by 1; 
+
+nvo_fecha date;
+nvo_dia varchar2(20);
+nvo_mes varchar2(20);
+nvo_trimestre varchar2(5);
+nvo_anio varchar2(5);
+
+BEGIN
+
+OPEN insertar_fecha;
+LOOP
+FETCH insertar_fecha into nvo_fecha, nvo_dia, v_mes, v_trimestre, v_anio;
+exit when insertar_fecha%NOTFOUND;
+insert into fecha_ini(fecha_i, dia_i, mes_i, trimestre_i, anio_i) 
+values (nvo_fecha, nvo_dia, nvo_mes, nvo_trimestre, nvo_anio);
+END LOOP;
+CLOSE insertar_fecha;
+
+
+END cargar_fecha_ini;
+
