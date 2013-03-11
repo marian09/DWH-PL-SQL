@@ -1,3 +1,5 @@
+
+-------------------------------------- CREACION DE LA DIMENSION RAMA -------------------------------------------
 CREATE TABLE RAMA 
     ( 
      RAMA_ID NUMBER  NOT NULL , 
@@ -19,3 +21,22 @@ WHEN (NEW.RAMA_ID IS NULL)
 BEGIN 
     SELECT RAMA_RAMA_ID_SEQ.NEXTVAL INTO :NEW.RAMA_ID FROM DUAL; 
 END;
+
+------------------------------- PROCEDIMIENTO PARA EL LLENADO DE RAMA ------------------------------------------------
+
+create or replace
+procedure llenar_rama as
+cursor rama is
+select distinct (stst.tso_codigo), stst.tso_nombre from sds_tipo_servicios_tso stst;
+
+v_codigo sds_tipo_servicios_tso.tso_codigo% TYPE;
+v_nombre sds_tipo_servicios_tso.tso_nombre% TYPE;
+begin 
+open rama;
+loop
+fetch rama into v_codigo, v_nombre;
+exit when rama%NOTFOUND;
+insert into RAMA(rama_id_viejo, nombre) values(v_codigo, v_nombre);
+end loop;
+close rama;
+end llenar_rama;
