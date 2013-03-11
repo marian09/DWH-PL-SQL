@@ -1,0 +1,51 @@
+Script de la tabla Material:
+
+/------------------------
+
+CREATE TABLE MATERIAL 
+    ( 
+     MATERIAL_ID NUMBER  NOT NULL , 
+     NOMBRE VARCHAR2 (6) , 
+     MAT_ID_VIEJO VARCHAR2 (6) 
+    ) 
+;
+ALTER TABLE MATERIAL 
+    ADD CONSTRAINT MATERIAL_PK PRIMARY KEY ( MATERIAL_ID ) ;
+
+CREATE SEQUENCE MATERIAL_MATERIAL_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER MATERIAL_MATERIAL_ID_TRG 
+BEFORE INSERT ON MATERIAL 
+FOR EACH ROW 
+WHEN (NEW.MATERIAL_ID IS NULL) 
+BEGIN 
+    SELECT MATERIAL_MATERIAL_ID_SEQ.NEXTVAL INTO :NEW.MATERIAL_ID FROM DUAL; 
+END;
+
+/-------------------------------
+
+create or replace
+PROCEDURE cargar_materiales AS
+
+CURSOR materiales IS 
+select distinct(mtl_codigo) codigo, mtl_nombre nombre from sds_materiales_mtl
+order by 1;
+
+
+nvo_codigo VARCHAR2(6);
+nvo_nombre VARCHAR2(90);
+
+BEGIN
+
+OPEN materiales;
+LOOP
+FETCH materiales into nvo_codigo, nvo_nombre;
+exit when materiales%NOTFOUND;
+insert into material(mat_id_viejo, nombre) values (nvo_codigo, nvo_nombre);
+END LOOP;
+CLOSE materiales;
+
+
+END cargar_materiales;
