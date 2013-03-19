@@ -1,0 +1,52 @@
+-------------------------------Scripts y LLenado de la tabla ESTADO
+
+CREATE TABLE ESTADO 
+    ( 
+     ESTADO_ID NUMBER  NOT NULL , 
+     NOMBRE VARCHAR2 (50) , 
+     EDO_ID_VIEJO VARCHAR2 (10) 
+    ) 
+;
+
+
+
+ALTER TABLE ESTADO 
+    ADD CONSTRAINT TABLE_2_PK PRIMARY KEY ( ESTADO_ID ) ;
+
+
+
+CREATE SEQUENCE ESTADO_ESTADO_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER ESTADO_ESTADO_ID_TRG 
+BEFORE INSERT ON ESTADO 
+FOR EACH ROW 
+WHEN (NEW.ESTADO_ID IS NULL) 
+BEGIN 
+    SELECT ESTADO_ESTADO_ID_SEQ.NEXTVAL INTO :NEW.ESTADO_ID FROM DUAL; 
+END;
+/
+
+
+--------------------------------------------------------------------------------Llenado de tabla de ESTADO
+create or replace
+PROCEDURE Llenar_ESTADO AS 
+
+cursor ESTADO_C is
+select distinct (etu_codigo) as "codigo", etu_nombre as "nombre"
+from sds_estatus_etu
+order by 1;
+
+v_codigo sds_estatus_etu.etu_codigo%type;
+v_nombre sds_estatus_etu.etu_nombre%type;
+
+BEGIN
+open ESTADO_C;
+  loop
+    fetch ESTADO_C into v_codigo,v_nombre;
+    exit when ESTADO_C%NOTFOUND;
+    insert into ESTADO (NOMBRE,EDO_ID_VIEJO) values (v_nombre,v_codigo);
+  end loop;
+  close ESTADO_C;
+END Llenar_ESTADO;
