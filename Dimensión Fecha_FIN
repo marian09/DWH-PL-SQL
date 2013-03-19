@@ -1,0 +1,63 @@
+------------------Scripts y Llenado de la tabla Fecha_FIN
+
+CREATE TABLE FECHA_FIN 
+    ( 
+     FECHA_ID NUMBER  NOT NULL , 
+     FECHA_F DATE , 
+     DIA_F VARCHAR2 (50) , 
+     MES_F VARCHAR2 (50) , 
+     TRIMESTRE_F VARCHAR2 (50) , 
+     ANIO_F VARCHAR2 (50) 
+    ) 
+;
+
+
+
+ALTER TABLE FECHA_FIN 
+    ADD CONSTRAINT FECHA_FIN_PK PRIMARY KEY ( FECHA_ID ) ;
+
+
+
+CREATE SEQUENCE FECHA_FIN_FECHA_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER FECHA_FIN_FECHA_ID_TRG 
+BEFORE INSERT ON FECHA_FIN 
+FOR EACH ROW 
+WHEN (NEW.FECHA_ID IS NULL) 
+BEGIN 
+    SELECT FECHA_FIN_FECHA_ID_SEQ.NEXTVAL INTO :NEW.FECHA_ID FROM DUAL; 
+END;
+/
+
+
+
+
+--------------------------------------------------------------------------------Llenado de tabla de FECHA_FIN
+create or replace PROCEDURE Llenar_FECHA_FIN AS 
+
+cursor fecha_f is
+select distinct to_date(his_fecha_fin,'DD/MM/YY') as fecha,
+to_char(his_fecha_fin, 'DAY') dia, 
+to_char(his_fecha_fin, 'MONTH') mes,
+to_char(his_fecha_fin,'Q') trimestre,
+to_char(his_fecha_fin, 'YY') año
+from ITEMS_HISTORICOS
+order by fecha;
+
+v_fecha date;
+v_nombre_dia varchar2(50);
+v_mes varchar2(50);
+v_trimestre varchar2(50);
+v_año varchar2(50);
+
+BEGIN
+open fecha_f;
+  loop
+    fetch fecha_f into v_fecha,v_nombre_dia,v_mes,v_trimestre,v_año;
+    exit when fecha_f%NOTFOUND;
+    insert into FECHA_FIN (fecha_f,dia_f,mes_f,trimestre_f,anio_f) values(v_fecha,v_nombre_dia,v_mes,v_trimestre,v_año);
+  end loop;
+  close fecha_f;
+END Llenar_FECHA_FIN;

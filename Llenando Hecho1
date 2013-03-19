@@ -1,0 +1,119 @@
+create or replace
+PROCEDURE LLENAR_HECHO1 AS
+
+cursor PrimeroA is 
+select CC.CENTRO_ID as "NuevoCC", formato.jef_infa_ctr_id_centro AS "viejoCC" ,SOL.SOLICITUD_ID AS "NUEVASOL",formato.fmo_codigo as "VIEJASOL",
+E.ESTADO_ID as "EstadoNuevo",est.etu_codigo as "EstadoViejo",FI.FECHA_ID as "FI nueva",ih.his_fecha_inicio as "FI vieja",FF.FECHA_ID as "FF nueva",ih.his_fecha_fin as "FF vieja" from items_historicos ih 
+JOIN FECHA_FIN FF ON FF.FECHA_F=to_date(ih.his_fecha_fin,'DD/MM/YY')
+JOIN FECHA_INI FI ON FI.FECHA_I=to_date(ih.his_fecha_inicio,'DD/MM/YY')
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+JOIN ESTADO E ON E.EDO_ID_VIEJO=est.etu_codigo
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+JOIN SOLICITUD SOL ON SOL.SOL_ID_VIEJO=formato.fmo_codigo
+JOIN CENTRO_COSTOS CC ON CC.CEN_ID_VIEJO=formato.jef_infa_ctr_id_centro
+where ih.his_fecha_inicio is not null and ih.his_fecha_fin is not null
+order by 1,3;
+
+cursor TIEM_PROM_SOL(IDCENTRO SIF_CENTRO_COSTOS.CTR_ID_CENTRO%TYPE, IDSOLICITUD SDS_FORMATOS_FMO.FMO_CODIGO%TYPE,IDESTADO SDS_ESTATUS_ETU.ETU_CODIGO%TYPE,IDINICIO ITEMS_HISTORICOS.HIS_FECHA_INICIO%TYPE, IDFIN ITEMS_HISTORICOS.HIS_FECHA_FIN%TYPE)
+is 
+select I."centro_id",I."fmo_id",I."estad",I."fecha_I" , I."fecha_T" ,AVG(I."fecha_T"-I."fecha_I") as "PROM" from
+(select formato.jef_infa_ctr_id_centro as "centro_id",ih.fmo_codigo as "fmo_id", ih.svo_codigo as "servicio_id",ih.etu_codigo as "estad",
+to_date(ih.his_fecha_inicio,'DD/MM/YY') as "fecha_I", to_date(ih.his_fecha_fin,'DD/MM/YY') as "fecha_T"
+from items_historicos ih 
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+order by 1,2)I where IDCENTRO=I."centro_id" and IDSOLICITUD=I."fmo_id" and IDESTADO=I."estad" and IDINICIO=I."fecha_I" and IDFIN=I."fecha_T" group by I."centro_id", I."fmo_id", I."estad", I."fecha_I", I."fecha_T" order by 1;
+
+cursor TIEMPO_ATENCION(IDCENTRO SIF_CENTRO_COSTOS.CTR_ID_CENTRO%TYPE, IDSOLICITUD SDS_FORMATOS_FMO.FMO_CODIGO%TYPE,IDESTADO SDS_ESTATUS_ETU.ETU_CODIGO%TYPE,IDINICIO ITEMS_HISTORICOS.HIS_FECHA_INICIO%TYPE, IDFIN ITEMS_HISTORICOS.HIS_FECHA_FIN%TYPE)
+is
+select I."centro_id",F."fmo_id",F."est", I."fecha_I" as "Inicio", F."fecha_T" as "Termino", F."fecha_T"-I."fecha_I" as "tiempo"  from
+(select formato.jef_infa_ctr_id_centro as "centro_id",ih.fmo_codigo as "fmo_id", ih.svo_codigo as "servicio_id",ih.etu_codigo as "est", to_date(ih.his_fecha_inicio,'DD/MM/YY') as "fecha_I" 
+from items_historicos ih 
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+where est.etu_codigo=1
+order by 1,2)I
+Join
+(select formato.jef_infa_ctr_id_centro as "centro_id",ih.fmo_codigo as "fmo_id",ih.svo_codigo as "servicio_id",ih.etu_codigo as "est", to_date(ih.his_fecha_fin,'DD/MM/YY') as "fecha_T" 
+from items_historicos ih 
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+where est.etu_codigo=5
+order by 1,2)F 
+on I."centro_id"=F."centro_id" and I."servicio_id"=F."servicio_id" and I."fmo_id"=F."fmo_id"
+where I."fecha_I" is not null and F."fecha_T" is not null and F."fecha_T"-I."fecha_I">=0 and IDCENTRO=I."centro_id" and IDSOLICITUD=F."fmo_id" and IDESTADO=F."est" and IDINICIO=I."fecha_I" and IDFIN=F."fecha_T"
+;
+
+cursor CANT_SOLIC_EDO(IDCENTRO SIF_CENTRO_COSTOS.CTR_ID_CENTRO%TYPE, IDSOLICITUD SDS_FORMATOS_FMO.FMO_CODIGO%TYPE,IDESTADO SDS_ESTATUS_ETU.ETU_CODIGO%TYPE,IDINICIO ITEMS_HISTORICOS.HIS_FECHA_INICIO%TYPE, IDFIN ITEMS_HISTORICOS.HIS_FECHA_FIN%TYPE)
+is 
+select I."centro_id",I."fmo_id",count (I."fmo_id") as "ca" ,I."estad", to_char(I."fecha_T",'MONTH/YY'),to_char(I."fecha_I",'MONTH/YY') from
+(select formato.jef_infa_ctr_id_centro as "centro_id",ih.fmo_codigo as "fmo_id", ih.svo_codigo as "servicio_id",ih.etu_codigo as "estad",
+to_date(ih.his_fecha_inicio,'DD/MM/YY') as "fecha_I", to_date(ih.his_fecha_fin,'DD/MM/YY') as "fecha_T"
+from items_historicos ih 
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+where ih.etu_codigo=5 or ih.etu_codigo=3
+order by 1,2)I where IDCENTRO=I."centro_id" and IDSOLICITUD=I."fmo_id" and IDESTADO=I."estad" and IDINICIO=I."fecha_I" and IDFIN=I."fecha_T" group by I."centro_id", I."fmo_id", I."estad", I."fecha_I", I."fecha_T"
+;
+
+cursor CANT_SOLC_CENTRO(IDCENTRO SIF_CENTRO_COSTOS.CTR_ID_CENTRO%TYPE, IDSOLICITUD SDS_FORMATOS_FMO.FMO_CODIGO%TYPE,IDESTADO SDS_ESTATUS_ETU.ETU_CODIGO%TYPE,IDINICIO ITEMS_HISTORICOS.HIS_FECHA_INICIO%TYPE, IDFIN ITEMS_HISTORICOS.HIS_FECHA_FIN%TYPE)
+is 
+select I."centro_id",I."fmo_id",count(I."fmo_id") as "cas",I."estad", to_char(I."fecha_T",'MONTH/YY'),to_char(I."fecha_I",'MONTH/YY') from
+(select formato.jef_infa_ctr_id_centro as "centro_id",ih.fmo_codigo as "fmo_id", ih.svo_codigo as "servicio_id",ih.etu_codigo as "estad",
+to_date(ih.his_fecha_inicio,'DD/MM/YY') as "fecha_I", to_date(ih.his_fecha_fin,'DD/MM/YY') as "fecha_T"
+from items_historicos ih 
+join sds_estatus_etu est on est.etu_codigo=ih.etu_codigo 
+join items i on i.fmo_codigo=ih.fmo_codigo and i.svo_codigo=ih.svo_codigo
+join sds_formatos_fmo formato on formato.fmo_codigo = i.fmo_codigo
+where ih.etu_codigo=5 or ih.etu_codigo=3
+order by 1,2)I where IDCENTRO=I."centro_id" and IDSOLICITUD=I."fmo_id" and IDESTADO=I."estad" and IDINICIO=I."fecha_I" and IDFIN=I."fecha_T" group by I."centro_id", I."fmo_id", I."estad", to_char(I."fecha_T",'MONTH/YY'), to_char(I."fecha_I",'MONTH/YY')
+;
+
+
+v_PrimeroA PrimeroA%rowtype;
+v_TIEM_PROM_SOL TIEM_PROM_SOL%rowtype;
+v_TIEMPO_ATENCION TIEMPO_ATENCION%rowtype;
+v_CANT_SOLIC_EDO CANT_SOLIC_EDO%rowtype;
+v_CANT_SOLC_CENTRO CANT_SOLC_CENTRO%rowtype;
+v_total number;
+BEGIN
+
+select count(famo.jef_infa_ctr_id_centro) 
+into v_total
+from sds_formatos_fmo famo ;
+
+DBMS_OUTPUT.DISABLE;
+DBMS_OUTPUT.ENABLE(1000000);
+  open PrimeroA;
+  loop
+    fetch PrimeroA into v_PrimeroA;
+    exit when PrimeroA%NOTFOUND;
+    open CANT_SOLC_CENTRO (v_PrimeroA."viejoCC",v_PrimeroA."VIEJASOL",v_PrimeroA."EstadoViejo",v_PrimeroA."FI vieja",v_PrimeroA."FF vieja");
+    open CANT_SOLIC_EDO (v_PrimeroA."viejoCC",v_PrimeroA."VIEJASOL",v_PrimeroA."EstadoViejo",v_PrimeroA."FI vieja",v_PrimeroA."FF vieja");
+    open TIEM_PROM_SOL (v_PrimeroA."viejoCC",v_PrimeroA."VIEJASOL",v_PrimeroA."EstadoViejo",v_PrimeroA."FI vieja",v_PrimeroA."FF vieja");
+   
+   -- open TIEMPO_ATENCION (v_PrimeroA."viejoCC",v_PrimeroA."VIEJASOL",v_PrimeroA."EstadoViejo",v_PrimeroA."FI vieja",v_PrimeroA."FF vieja");
+      loop
+      fetch CANT_SOLC_CENTRO into v_CANT_SOLC_CENTRO;
+      fetch CANT_SOLIC_EDO into v_CANT_SOLIC_EDO;
+      fetch TIEM_PROM_SOL into v_TIEM_PROM_SOL;
+     -- fetch TIEMPO_ATENCION into v_TIEMPO_ATENCION;
+      exit when TIEM_PROM_SOL%NOTFOUND;
+     -- dbms_output.put_line(v_PrimeroA."NuevoCC"||' '||v_PrimeroA."NUEVASOL"||' '||v_PrimeroA."EstadoNuevo"||' '||v_PrimeroA."FI nueva"||' '||v_PrimeroA."FF nueva"||' CSE:'||v_CANT_SOLIC_EDO."ca"||' TPS:'||v_TIEM_PROM_SOL."PROM"||' CSCENTRO:'||v_CANT_SOLC_CENTRO."cas"||' total:'||v_total);
+      insert into HECHO1(SOLICITUD_ID,ESTADO_ID,CENTRO_ID,FECHA_I_ID,FECHA_F_ID,TIEMPO_ATENCION,CANT_SOLIC_EDO,TIEM_PROM_SOL,CANTIDAD_TOTAL,CANTIDAD_SOLC_CENTRO)
+      values(v_PrimeroA."NUEVASOL",v_PrimeroA."EstadoNuevo",v_PrimeroA."NuevoCC",v_PrimeroA."FI nueva",v_PrimeroA."FF nueva",0,v_CANT_SOLIC_EDO."ca",v_TIEM_PROM_SOL."PROM",v_total,v_CANT_SOLC_CENTRO."cas");
+      end loop;
+      close TIEM_PROM_SOL;
+      close CANT_SOLIC_EDO;
+      close CANT_SOLC_CENTRO;
+     -- close TIEMPO_ATENCION;
+  end loop;
+  close PrimeroA;
+
+
+END LLENAR_HECHO1;

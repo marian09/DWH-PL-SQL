@@ -1,0 +1,52 @@
+------------------------------------------Scripts y llenado de la tabla EMPLEADO
+
+
+CREATE TABLE EMPLEADO 
+    ( 
+     EMPLEADO_ID NUMBER  NOT NULL , 
+     CEDULA VARCHAR2 (14) , 
+     TIPO VARCHAR2 (6) 
+    ) 
+;
+
+
+
+ALTER TABLE EMPLEADO 
+    ADD CONSTRAINT EMPLEADO_PK PRIMARY KEY ( EMPLEADO_ID ) ;
+
+
+
+CREATE SEQUENCE EMPLEADO_EMPLEADO_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER EMPLEADO_EMPLEADO_ID_TRG 
+BEFORE INSERT ON EMPLEADO 
+FOR EACH ROW 
+WHEN (NEW.EMPLEADO_ID IS NULL) 
+BEGIN 
+    SELECT EMPLEADO_EMPLEADO_ID_SEQ.NEXTVAL INTO :NEW.EMPLEADO_ID FROM DUAL; 
+END;
+/
+
+--------------------------------------------------------------------------------Llenando tabla EMPLEADO
+create or replace
+PROCEDURE Llenar_EMPLEADO AS 
+
+cursor EMPLEADO_C is
+select distinct infa_cedula, infa_pern_tipn_codigo
+from asig_personal
+order by 1;
+
+v_cedula asig_personal.infa_cedula%type;
+v_tipo asig_personal.infa_pern_tipn_codigo%type;
+
+BEGIN
+open EMPLEADO_C;
+  loop
+    fetch EMPLEADO_C into v_cedula,v_tipo;
+    exit when EMPLEADO_C%NOTFOUND;
+    insert into EMPLEADO (cedula,tipo) values (v_cedula,v_tipo);
+  end loop;
+  close EMPLEADO_C;
+END Llenar_EMPLEADO;

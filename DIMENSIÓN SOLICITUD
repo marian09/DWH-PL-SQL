@@ -1,0 +1,41 @@
+----------------------------------------------- CREACION DE LA DIMENSION SOLICITUD----------------------------------------------
+CREATE TABLE SOLICITUD 
+    ( 
+     SOLICITUD_ID NUMBER  NOT NULL , 
+     SOL_ID_VIEJO VARCHAR2 (10) 
+    ) 
+;
+
+ALTER TABLE SOLICITUD 
+    ADD CONSTRAINT SOLICITUD_PK PRIMARY KEY ( SOLICITUD_ID ) ;
+
+CREATE SEQUENCE SOLICITUD_SOLICITUD_ID_SEQ 
+    NOCACHE 
+    ORDER ;
+
+CREATE OR REPLACE TRIGGER SOLICITUD_SOLICITUD_ID_TRG 
+BEFORE INSERT ON SOLICITUD 
+FOR EACH ROW 
+WHEN (NEW.SOLICITUD_ID IS NULL) 
+BEGIN 
+    SELECT SOLICITUD_SOLICITUD_ID_SEQ.NEXTVAL INTO :NEW.SOLICITUD_ID FROM DUAL; 
+END;
+
+--------------------------------------------CREACION DEL PROCEDIMIENTO PARA LLENAR SOLICITUD---------------------
+
+create or replace
+procedure llenar_solicitud as
+cursor solicitud is
+select DISTINCT (fmo_codigo) from sds_formatos_fmo
+order by 1;
+
+v_codigo sds_formatos_fmo.fmo_codigo% TYPE;
+begin 
+open solicitud;
+loop
+fetch solicitud into v_codigo;
+exit when solicitud%NOTFOUND;
+insert into solicitud( sol_id_viejo ) values(v_codigo);
+end loop;
+close solicitud;
+end llenar_solicitud;
