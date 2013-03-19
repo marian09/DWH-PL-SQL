@@ -1,0 +1,99 @@
+create or replace
+procedure llenar_hecho3 as
+
+cursor cdimen is
+select m.material_id mnu, m.mat_id_viejo mvi, fi.fecha_id finu, ff.fecha_id ffnu, fi.fecha_i fivi, ff.fecha_f ffvi,  em.empleado_id emnu, em.cedula emvi from material m 
+join asignarmaterial am
+on am.mtl_codigo= m.mat_id_viejo
+join asig_personal ap
+on am.fmo_codigo=ap.fmo_codigo and am.svo_codigo=ap.svo_codigo
+join empleado em
+on em.cedula=ap.infa_cedula
+join items i
+on i.fmo_codigo= ap.fmo_codigo and i.svo_codigo= ap.svo_codigo
+join items_historicos ih
+on ih.fmo_codigo= i.fmo_codigo and i.svo_codigo= ih.svo_codigo
+join fecha_ini fi
+on fi.fecha_i= to_date(ih.his_fecha_inicio,'DD/MM/YY')
+join fecha_fin ff
+on ff.fecha_f= to_date(ih.his_fecha_fin,'DD/MM/YY')
+order BY 1 asc;
+
+cursor materialusado(empleado asig_personal.infa_cedula%TYPE, material sds_materiales_mtl.mtl_codigo%TYPE, fini items_historicos.his_fecha_inicio%TYPE, ffin items_historicos.his_fecha_fin%TYPE) is
+
+select sum(asm.aml_cantidadusada) usada, to_char(ith.his_fecha_fin,'month') Mes, to_char(ith.his_fecha_fin,'yyyy') Año, asp.infa_cedula, asm.mtl_codigo /*,  asm.fmo_codigo, asm.svo_codigo*/ from asignarmaterial asm
+join asig_personal asp
+on asm.svo_codigo= asp.svo_codigo and asm.fmo_codigo= asp.fmo_codigo
+join items it
+on it.fmo_codigo= asp.fmo_codigo and asm.svo_codigo= it.svo_codigo
+join items_historicos ith
+on it.fmo_codigo= ith.fmo_codigo and it.svo_codigo= ith.svo_codigo
+where ith.etu_codigo=5 and to_char(ith.his_fecha_fin,'month') is not null and to_char(ith.his_fecha_fin,'yyyy') is not null and empleado=asp.infa_cedula and material=asm.mtl_codigo and fini=ith.his_fecha_inicio and ffin=ith.his_fecha_fin
+group by to_char(ith.his_fecha_fin,'month'), to_char(ith.his_fecha_fin,'yyyy'), asp.infa_cedula, asm.mtl_codigo, asm.mtl_codigo
+order by 3;
+
+
+cursor trabsobre(empleado asig_personal.infa_cedula%TYPE, material sds_materiales_mtl.mtl_codigo%TYPE, fini items_historicos.his_fecha_inicio%TYPE, ffin items_historicos.his_fecha_fin%TYPE) is
+
+select count(ap.fmo_codigo) codi, am.mtl_codigo,it.his_fecha_inicio,it.his_fecha_fin,ap.infa_cedula from asig_personal ap
+join asignarmaterial am
+on ap.fmo_codigo=am.fmo_codigo and ap.svo_codigo=am.svo_codigo
+join items i
+on i.fmo_codigo=ap.fmo_codigo and i.svo_codigo=ap.svo_codigo
+join items_historicos it
+on it.fmo_codigo=i.fmo_codigo and it.svo_codigo=i.svo_codigo
+where ap.apl_personalsugerido<ap.apl_personalusado and am.aml_cantidadestimada<am.aml_cantidadusada and empleado=ap.infa_cedula and material=am.mtl_codigo and fini=it.his_fecha_inicio and ffin=it.his_fecha_fin
+group by am.mtl_codigo, it.his_fecha_inicio, it.his_fecha_fin, ap.infa_cedula
+order by 1;
+
+cursor porcen_ocu(empleado asig_personal.infa_cedula%TYPE, material sds_materiales_mtl.mtl_codigo%TYPE, fini items_historicos.his_fecha_inicio%TYPE, ffin items_historicos.his_fecha_fin%TYPE)is
+
+select count(ap.infa_cedula) ocupacion, ap.infa_cedula, am.mtl_codigo, ith.his_fecha_inicio, ith.his_fecha_fin from asig_personal ap
+join items it
+on ap.fmo_codigo=it.fmo_codigo and ap.svo_codigo=it.svo_codigo
+join items_historicos ith
+on ith.fmo_codigo=it.fmo_codigo and ith.svo_codigo=it.svo_codigo
+join asignarmaterial am
+on am.fmo_codigo=ap.fmo_codigo and am.svo_codigo=ap.svo_codigo 
+where empleado=ap.infa_cedula and material=am.mtl_codigo and fini=ith.his_fecha_inicio and ffin=ith.his_fecha_fin
+group by ap.infa_cedula, am.mtl_codigo, ith.his_fecha_inicio, ith.his_fecha_fin
+order by 1;
+
+
+v_id cdimen%rowtype;
+v_material materialusado%rowtype;
+v_trabajo trabsobre%rowtype;
+v_porcentaje porcen_ocu%rowtype;
+v_ocupacion number;
+
+BEGIN
+
+
+
+select count(distinct infa_cedula) into v_ocupacion from asig_personal;
+
+DBMS_OUTPUT.DISABLE;
+DBMS_OUTPUT.ENABLE(1000000);
+  open cdimen;
+  loop
+    fetch cdimen into v_id;
+    exit when cdimen%NOTFOUND;
+    open materialusado (v_id.emvi,v_id.mvi,v_id.fivi,v_id.ffvi);
+    open trabsobre (v_id.emvi,v_id.mvi,v_id.fivi,v_id.ffvi); 
+    open porcen_ocu(v_id.emvi,v_id.mvi,v_id.fivi,v_id.ffvi);
+      loop
+      fetch materialusado into v_material;
+      fetch trabsobre into v_trabajo;
+      fetch porcen_ocu into v_porcentaje;
+      exit when porcen_ocu%NOTFOUND;
+    --  dbms_output.put_line('IDE: '||v_id.emnu||' IDM: '||v_id.mnu||' IDFI: '||v_id.finu||' IDFF: '||v_id.ffnu||' Cant: '||v_material.usada);
+    --  dbms_output.put_line('IDE: '||v_id.emnu||' IDM: '||v_id.mnu||' IDFI: '||v_id.finu||' IDFF: '||v_id.ffnu||' Trab: '||v_trabajo.codi);
+    --  dbms_output.put_line('IDE: '||v_id.emnu||' IDM: '||v_id.mnu||' IDFI: '||v_id.finu||' IDFF: '||v_id.ffnu||' Cant: '||v_porcentaje.ocupacion||' Total: '||v_ocupacion);
+    insert into hecho3(empleado_id,material_id,fecha_i_id,fecha_f_id,cant_material_utilizado,cant_ocup_sg,total_ocup_sg,cant_trabajos_sobrepasan) values(v_id.emnu,v_id.mnu,v_id.finu,v_id.ffnu,v_material.usada,v_porcentaje.ocupacion,v_ocupacion,v_trabajo.codi);
+      end loop;
+      close materialusado;
+      close trabsobre;
+      close porcen_ocu;
+  end loop;
+  close cdimen;
+end llenar_hecho3;
