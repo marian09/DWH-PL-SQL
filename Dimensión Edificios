@@ -1,0 +1,16 @@
+create or replace procedure llena_edif as cursor edifc is
+(select distinct(edo_codigo) ide, edo_nombre nom from edificio);
+
+v_edifcc edifc%rowtype;
+
+begin
+
+open edifc;
+loop
+  fetch edifc into v_edifcc;
+    exit when edifc%NOTFOUND;
+    dbms_output.put_line('IDE: '||v_edifcc.ide||' NOM:'||v_edifcc.nom);
+    insert into edificios(ed_id_viejo, nombre)values(v_edifcc.ide, v_edifcc.nom); 
+      end loop;
+close edifc;
+end llena_edif;
