@@ -1,0 +1,16 @@
+create or replace procedure llena_cc as cursor centroc is
+(select distinct(ctr_id_centro) idc, ctr_descripcion descr from sif_centro_costos);
+
+v_centrocc centroc%rowtype;
+
+begin
+
+open centroc;
+loop
+  fetch centroc into v_centrocc;
+    exit when centroc%NOTFOUND;
+    dbms_output.put_line('IDC: '||v_centrocc.idc||' DESCR:'||v_centrocc.descr);
+    insert into centro_costos(nombre, cen_id_viejo)values(v_centrocc.descr, v_centrocc.idc); 
+      end loop;
+close centroc;
+end llena_cc;
