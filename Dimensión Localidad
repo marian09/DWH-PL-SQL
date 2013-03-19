@@ -1,0 +1,17 @@
+create or replace
+procedure llena_lcd as cursor lcdc is
+(select distinct(lcd_codigo) idl, lcd_nombre nom from sds_localidades_lcd);
+
+v_lcdcc lcdc%rowtype; 
+
+begin
+ 
+open lcdc;
+loop
+  fetch lcdc into v_lcdcc;
+    exit when lcdc%NOTFOUND;
+    dbms_output.put_line('IDL: '|| v_lcdcc.idl||' NOM:'|| v_lcdcc.nom);
+    insert into localidad(nombre, loc_id_viejo) values(v_lcdcc.nom, v_lcdcc.idl);  
+      end loop;
+close lcdc;
+end llena_lcd;  
